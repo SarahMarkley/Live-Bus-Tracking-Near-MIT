@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Add a default marker</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.css" rel="stylesheet" />
+<style>
+  body { margin: 0; padding: 0; }
+  #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+  .redMarker {
+  background-image: url('redBus.png');
+  background-size: cover;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+  .map-overlay{
+    position: absolute;
+    left: 0;
+    padding: 10px;
+  }
+
+  .mapboxgl-popup {
+  max-width: 200px;
+}
+
+.mapboxgl-popup-content {
+  text-align: center;
+  font-family: 'Open Sans', sans-serif;
+}
+
+
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+<div class="map-overlay top">
+  <button style="font-size: 2em;" onclick="run()">
+    Show Live Bus
+  </button>
+</div>
+
+<script>
+// This is the public access token, you can switch this to your own personal token.
+mapboxgl.accessToken = 'pk.eyJ1Ijoid2h5c29tYW55dXNlcm5hbWVzIiwiYSI6ImNreWJ3dXJxaTBqaGMyeXFoZXQxZnpsb20ifQ.8rSwYFXx98u3C0_pAH80bQ';
+
+var map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/streets-v11',
+  center: [-71.104081, 42.365554],
+  zoom: 14
+});
+
+const el = document.createElement('div');
+    el.className = 'redMarker';
+
+var marker = new mapboxgl.Marker(el)
+    .setLngLat([0, 0])
+    .addTo(map);
+
+var BusActive = false;
+async function run(){
+  const locations = await getBusLocations();
+  const BusInfo = await getBusInfo();
+  var Lng = locations[0].attributes.longitude;
+  var Lat = locations[0].attributes.latitude;
+  if(BusActive === false)
+  {
+    //Center on bus (Shoud be around MIT area normally)
+    map.flyTo({
+      center: [Lng, Lat]
+    });
+  }
+  marker.setLngLat([Lng, Lat])
+  .setPopup(
+    new mapboxgl.Popup({ offset: 25 }) // add popups
+      .setHTML(
+        `<h3>HeadSign: ${BusInfo[0].attributes.headsign}</h3><p>${locations[0].attributes.occupancy_status}</p>`
+      )
+  );
+	// timer
+	setTimeout(run, 5000);
+}
+
+// Request bus data from MBTA
+async function getBusLocations(){
+	const url = 'https://api-v3.mbta.com/vehicles?filter[route]=1&include=trip';
+	const response = await fetch(url);
+	const json     = await response.json();
+	return json.data;
+}
+
+async function getBusInfo(){
+	const url = 'https://api-v3.mbta.com/vehicles?filter[route]=1&include=trip';
+	const response = await fetch(url);
+	const json     = await response.json();
+	return json.included;
+}
+
+</script>
+</body>
+</html>
